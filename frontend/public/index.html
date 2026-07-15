@@ -3,22 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIVET CLOUD | Gestión Veterinaria</title>
-    <!-- Enlace al archivo CSS compilado por Tailwind -->
+    <title>SIVET CLOUD | Agendamiento</title>
     <link href="./output.css" rel="stylesheet">
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
     
-    <!-- Contenedor principal de la aplicación -->
-    <div id="app" class="min-h-screen flex flex-col">
-        <header class="bg-blue-600 text-white p-4 shadow-md">
-            <h1 class="text-2xl font-bold">SIVET CLOUD - Entorno de Desarrollo</h1>
-        </header>
+    <header class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-2xl font-bold tracking-tight">SIVET CLOUD</h1>
+        <span class="text-sm bg-blue-800 px-3 py-1 rounded-full">Módulo: Agendamiento</span>
+    </header>
+    
+    <main class="max-w-7xl mx-auto p-6 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <main class="flex-1 p-6">
-            <!-- Los componentes de los módulos se inyectarán aquí -->
-        </main>
-    </div>
+        <!-- Columna Izquierda: Formulario de Creación -->
+        <section class="bg-white p-6 rounded-lg shadow-md border border-gray-200 h-fit">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Nueva Cita Médica</h2>
+            <form id="appointment-form" class="space-y-4">
+                <!-- Se usan inputs de texto para los IDs temporalmente. En futuros sprints serán listas desplegables (selects) -->
+                <!-- Reemplazar este bloque -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Paciente</label>
+                    <select id="patientId" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white">
+                      <option value="" disabled selected>Cargando pacientes de la base de datos...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ID Veterinario</label>
+                    <input type="text" id="veterinarianId" required placeholder="Ej. 60d5ec496c152220b4112346" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha y Hora</label>
+                    <input type="datetime-local" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Duración (Minutos)</label>
+                    <input type="number" id="duration" required min="15" step="15" value="30" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Motivo de Consulta</label>
+                    <textarea id="reason" required maxlength="250" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                    Agendar Cita
+                </button>
+                <p id="form-msg" class="text-sm text-center hidden"></p>
+            </form>
+        </section>
 
+        <!-- Columna Derecha: Renderizado del Historial -->
+        <section class="lg:col-span-2">
+            <h2 class="text-2xl font-extrabold text-gray-900 mb-6">Calendario Activo</h2>
+            <div id="appointments-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p id="loading-msg" class="text-gray-500 animate-pulse col-span-full py-4">Sincronizando con la nube...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Lógica de red y mutación del DOM -->
+    <!-- Lógica de red y mutación del DOM -->
+    <script>
+        // Modificar la inicialización de la vista para cargar ambos recursos
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAppointments();
+            fetchPatientsForDropdown(); // Nueva petición
+        });
+
+        // Inyectar esta nueva función debajo del bloque DOMContentLoaded
+        async function fetchPatientsForDropdown() {
+            const selectElement = document.getElementById('patientId');
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/patients');
+                const result = await response.json();
+
+                if (result.success) {
+                    selectElement.innerHTML = '<option value="" disabled selected>Seleccione un paciente...</option>';
+                    
+                    result.data.forEach(patient => {
+                        const option = document.createElement('option');
+                        // El value almacena el ObjectId de MongoDB de forma invisible
+                        option.value = patient._id; 
+                        // El textContent es lo que visualiza el usuario humano
+                        option.textContent = `${patient.name} (${patient.species}) - Dueño: ${patient.ownerName}`;
+                        selectElement.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                selectElement.innerHTML = '<option value="" disabled>Error de red al cargar pacientes</option>';
+            }
+        }
+
+        const form = document.getElementById('appointment-form');
+        const grid = document.getElementById('appointments-grid');
+        const formMsg = document.getElementById('form-msg');
+
+        // Lógica POST: Capturar el envío del formulario
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const payload = {
+                patientId: document.getElementById('patientId').value,
+                veterinarianId: document.getElementById('veterinarianId').value,
+                date: new Date(document.getElementById('date').value).toISOString(),
+                duration: parseInt(document.getElementById('duration').value),
+                reason: document.getElementById('reason').value,
+                status: "Pendiente"
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    form.reset();
+                    formMsg.textContent = "Cita creada exitosamente.";
+                    formMsg.className = "text-sm text-center text-green-600 block mt-2 font-bold";
+                    fetchAppointments(); 
+                    setTimeout(() => formMsg.classList.add('hidden'), 3000);
+                } else {
+                    throw new Error(result.message || 'Error en validación');
+                }
+            } catch (error) {
+                formMsg.textContent = `Error: ${error.message}`;
+                formMsg.className = "text-sm text-center text-red-600 block mt-2 font-bold";
+                formMsg.classList.remove('hidden');
+            }
+        });
+
+        // Lógica PUT: Actualizar el estado de la cita
+        async function updateAppointmentStatus(id, newStatus) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/v1/appointments/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    // Si el servidor confirma la mutación, recargamos la grilla para ver el cambio
+                    fetchAppointments();
+                } else {
+                    alert('Error al intentar actualizar la cita.');
+                }
+            } catch (error) {
+                alert('Error de conexión con el servidor.');
+            }
+        }
+
+        // Lógica GET: Recuperar y renderizar datos
+        async function fetchAppointments() {
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/appointments');
+                const result = await response.json();
+
+                if (result.success) {
+                    grid.innerHTML = ''; 
+                    
+                    if(result.data.length === 0) {
+                        grid.innerHTML = '<p class="text-gray-500 col-span-full">No hay citas agendadas.</p>';
+                        return;
+                    }
+
+                    result.data.forEach(appointment => {
+                        const dateObj = new Date(appointment.date);
+                        const formattedDate = dateObj.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                        const formattedTime = dateObj.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+                        // Lógica de colores dinámica según el estado
+                        let statusColor = "bg-yellow-100 text-yellow-800 border-yellow-300"; // Pendiente
+                        if(appointment.status === "Confirmada") statusColor = "bg-green-100 text-green-800 border-green-300";
+                        if(appointment.status === "Cancelada") statusColor = "bg-red-100 text-red-800 border-red-300";
+
+                        const card = document.createElement('div');
+                        card.className = "bg-white rounded-lg shadow p-4 border-l-4 border-blue-500 flex flex-col justify-between";
+                        
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-md font-bold text-gray-900 capitalize">${formattedDate}</h3>
+                                    <span class="${statusColor} text-xs font-semibold px-2 py-0.5 rounded border">
+                                        ${appointment.status}
+                                    </span>
+                                </div>
+                                <p class="text-sm font-medium text-blue-600 mb-2">${formattedTime} • ${appointment.duration} min</p>
+                                <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded border"><span class="font-bold text-gray-900">Motivo:</span> ${appointment.reason}</p>
+                            </div>
+                            <div class="mt-4 flex justify-between items-end border-t pt-3">
+                                <p class="text-xs text-gray-500 font-mono bg-gray-100 p-1 rounded">ID: ${appointment.patientId.substring(0,6)}...</p>
+                                
+                                <!-- Botones de acción dinámicos -->
+                                <div class="space-x-2">
+                                    ${appointment.status !== 'Confirmada' ? `<button onclick="updateAppointmentStatus('${appointment._id}', 'Confirmada')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded transition">Confirmar</button>` : ''}
+                                    ${appointment.status !== 'Cancelada' ? `<button onclick="updateAppointmentStatus('${appointment._id}', 'Cancelada')" class="text-xs bg-red-600 hover:bg-red-700 text-white py-1 px-2 rounded transition">Cancelar</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                grid.innerHTML = '<p class="text-red-500 font-bold col-span-full py-4">Error de conexión con la base de datos.</p>';
+            }
+        }
+    </script>
 </body>
 </html>

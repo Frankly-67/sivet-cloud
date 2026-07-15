@@ -16,11 +16,13 @@ const app = express();
 app.use(cors()); // Habilita peticiones cruzadas
 app.use(express.json()); // Permite al servidor entender cuerpos de peticiones en formato JSON
 
-// Importación de Rutas del Módulo
-const appointmentRoutes = require('./routes/appointment.routes');
+// 1. Importación de archivos de rutas
+const appointments = require('./routes/appointment.routes');
+const patients = require('./routes/patient.routes'); // <-- Nueva importación
 
-// Montar enrutadores
-app.use('/api/v1/appointments', appointmentRoutes);
+// 2. Montaje de los enrutadores en las rutas base
+app.use('/api/v1/appointments', appointments);
+app.use('/api/v1/patients', patients); // <-- Nuevo montaje en la URL base
 
 // Ruta de comprobación de salud (Healthcheck)
 app.get('/api/v1/health', (req, res) => {
