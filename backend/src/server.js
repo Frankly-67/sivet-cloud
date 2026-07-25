@@ -19,10 +19,12 @@ app.use(express.json()); // Permite al servidor entender cuerpos de peticiones e
 // 1. Importación de archivos de rutas
 const appointments = require('./routes/appointment.routes');
 const patients = require('./routes/patient.routes'); // <-- Nueva importación
+const veterinarians = require('./routes/veterinarian.routes');
 
 // 2. Montaje de los enrutadores en las rutas base
 app.use('/api/v1/appointments', appointments);
-app.use('/api/v1/patients', patients); // <-- Nuevo montaje en la URL base
+app.use('/api/v1/patients', patients);
+app.use('/api/v1/veterinarians', veterinarians); // <-- Nuevo montaje en la URL base
 
 // Ruta de comprobación de salud (Healthcheck)
 app.get('/api/v1/health', (req, res) => {
