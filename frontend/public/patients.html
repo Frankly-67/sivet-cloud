@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIVET CLOUD | Pacientes</title>
+    <link href="./output.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+    
+    <header class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-2xl font-bold tracking-tight">SIVET CLOUD</h1>
+        <nav class="text-sm font-medium space-x-4">
+            <a href="index.html" class="hover:text-blue-200 transition">Agendamiento</a>
+            <a href="patients.html" class="border-b-2 border-white pb-1">Pacientes</a>
+        </nav>
+    </header>
+    
+    <main class="max-w-7xl mx-auto p-6 mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Formulario de Registro -->
+        <section class="bg-white p-6 rounded-lg shadow-md border border-gray-200 h-fit">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Registrar Paciente</h2>
+            <form id="patient-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre del Paciente</label>
+                    <input type="text" id="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Especie</label>
+                    <select id="species" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border bg-white">
+                        <option value="Canino">Canino</option>
+                        <option value="Felino">Felino</option>
+                        <option value="Ave">Ave</option>
+                        <option value="Reptil">Reptil</option>
+                        <option value="Exótico">Exótico</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Raza</label>
+                    <input type="text" id="breed" value="Mestizo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Edad (Años o Meses)</label>
+                    <input type="number" id="age" required min="0" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Propietario</label>
+                    <input type="text" id="ownerName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Teléfono de Contacto</label>
+                    <input type="text" id="ownerContact" required pattern="\d{7,10}" title="Debe contener entre 7 y 10 dígitos numéricos" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                    Guardar Registro
+                </button>
+                <p id="form-msg" class="text-sm text-center hidden"></p>
+            </form>
+        </section>
+
+        <!-- Grilla de Datos -->
+        <section class="lg:col-span-2">
+            <h2 class="text-2xl font-extrabold text-gray-900 mb-6">Directorio de Pacientes</h2>
+            <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-300 bg-white">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Paciente</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Detalles</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Propietario</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Contacto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patients-table-body" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 animate-pulse">Consultando base de datos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', fetchPatients);
+
+        const form = document.getElementById('patient-form');
+        const tableBody = document.getElementById('patients-table-body');
+        const formMsg = document.getElementById('form-msg');
+
+        // Lógica POST: Captura de formulario
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const payload = {
+                name: document.getElementById('name').value,
+                species: document.getElementById('species').value,
+                breed: document.getElementById('breed').value,
+                age: parseFloat(document.getElementById('age').value),
+                ownerName: document.getElementById('ownerName').value,
+                ownerContact: document.getElementById('ownerContact').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/patients', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    form.reset();
+                    formMsg.textContent = "Paciente registrado en MongoDB.";
+                    formMsg.className = "text-sm text-center text-green-600 block mt-2 font-bold";
+                    fetchPatients(); 
+                    setTimeout(() => formMsg.classList.add('hidden'), 3000);
+                } else {
+                    throw new Error(result.message || 'Error en validación');
+                }
+            } catch (error) {
+                formMsg.textContent = `Error: ${error.message}`;
+                formMsg.className = "text-sm text-center text-red-600 block mt-2 font-bold";
+                formMsg.classList.remove('hidden');
+            }
+        });
+
+        // Lógica GET: Población de la tabla
+        async function fetchPatients() {
+            try {
+                const response = await fetch('http://localhost:5000/api/v1/patients');
+                const result = await response.json();
+
+                if (result.success) {
+                    tableBody.innerHTML = '';
+                    
+                    if(result.data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No hay registros almacenados.</td></tr>';
+                        return;
+                    }
+
+                    result.data.forEach(patient => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                                ${patient.name} <br>
+                                <span class="font-mono text-xs text-gray-400 bg-gray-50 p-0.5 rounded">ID: ${patient._id.substring(0,6)}...</span>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">${patient.species}</span>
+                                <br><span class="text-xs text-gray-500 mt-1 block">Raza: ${patient.breed} • Edad: ${patient.age}</span>
+                            </td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">${patient.ownerName}</td>
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 font-mono">${patient.ownerContact}</td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-red-500 font-bold">Fallo de conexión con el servidor.</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>
