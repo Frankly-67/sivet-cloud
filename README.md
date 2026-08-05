@@ -551,4 +551,4 @@ Este proyecto fue desarrollado con fines académicos como requisito para optar a
 
 El código podrá continuar evolucionando como un proyecto de software de gestión veterinaria basado en arquitectura SaaS.
 
-> **Última actualización:** Documentación correspondiente a la implementación inicial de la arquitectura del proyecto SIVET CLOUD.
+> **Última actualización:** Documentación correspondiente a la implementación inicial de la arquitectura del proyecto SIVET CLOUD. 
